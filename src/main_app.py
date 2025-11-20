@@ -1,3 +1,5 @@
+import os
+
 import streamlit as st
 
 from db_utils import DatabaseManager
@@ -32,16 +34,13 @@ def main():
         st.title("👮 99th Precinct DB")
         st.markdown("---")
 
-        # Connection Form
         with st.expander("Database Connection", expanded=True):
             db_host = st.text_input("Host", "localhost")
-            db_user = st.text_input("User", "root")
-            db_pass = st.text_input("Password", type="password")
+            db_user = st.text_input("User", "detective")
+            db_pass = st.text_input("Password", "Team82", type="password")
             db_name = st.text_input("Database", "mini_world_db")
-
             connect_btn = st.button("Connect/Refresh")
 
-        # Initialize Session State for DB
         if "db_manager" not in st.session_state or connect_btn:
             config = {
                 "host": db_host,
@@ -51,7 +50,6 @@ def main():
             }
             st.session_state.db_manager = DatabaseManager(config)
 
-        # Navigation
         st.markdown("---")
         nav_option = st.radio(
             "Navigation",
@@ -66,9 +64,6 @@ def main():
 
     if not success:
         st.error(f"Database Connection Failed: {msg}")
-        st.info(
-            "Please ensure your MySQL server is running and credentials are correct."
-        )
         return
 
     # ==========================================
@@ -78,29 +73,30 @@ def main():
         st.markdown(
             '<div class="main-header">Welcome, Detective.</div>', unsafe_allow_html=True
         )
-        st.write(
-            "Use the sidebar to navigate the Brooklyn 99 Evidence Management System."
-        )
-
         col1, col2 = st.columns(2)
         with col1:
-            st.info(
-                "📋 **Queries Section**: View rosters, heist history, and search evidence."
-            )
+            st.info("📋 **Queries**: 10 Operations available.")
         with col2:
-            st.warning(
-                "✏️ **Updates Section**: Log evidence, close cases, or manage resources."
-            )
+            st.warning("✏️ **Updates**: 10 Operations available.")
 
-        # Quick Stats (Example of a simple query on load)
-        try:
-            df_cases = db.execute_query(
-                "SELECT status, COUNT(*) as count FROM Case_File GROUP BY status"
-            )
-            st.subheader("Current Case Status Overview")
-            st.bar_chart(df_cases, x="status", y="count")
-        except Exception as e:
-            st.error(f"Could not load dashboard stats: {e}")
+        st.subheader("Recent Activity Log")
+        st.caption("Showing executed SQL queries (Chronological Order)")
+
+        if os.path.exists("sql_commands.log"):
+            try:
+                with open("sql_commands.log", "r") as f:
+                    lines = f.readlines()
+
+                if lines:
+                    # Display lines in original chronological order
+                    log_content = "".join(lines)
+                    st.code(log_content, language="sql")
+                else:
+                    st.info("Log file is empty.")
+            except Exception as e:
+                st.error(f"Error reading log file: {e}")
+        else:
+            st.info("No logs found yet.")
 
     # ==========================================
     # PAGE: Queries (Read)
@@ -110,56 +106,57 @@ def main():
             '<div class="main-header">📂 Database Queries</div>', unsafe_allow_html=True
         )
 
-        query_type = st.selectbox(
-            "Select Operation",
-            [
-                "1. The Squad Roster (Filter by Squad)",
-                "2. Detective Case Load (Aggregation)",
-                "3. Halloween Heist Hall of Fame (Joins)",
-                "4. Search Evidence Log (Text Search)",
-                "5. Perpetrator Network (Multi-Table Join)",
-            ],
-        )
-
+        options = [
+            "1. View Squad Roster (Filter by Squad Name)",
+            "2. Generate Detective Case Load Report (Aggregation)",
+            "3. View Halloween Heist Hall of Fame (Joins)",
+            "4. Search Evidence Log by Keyword",
+            "5. View Perpetrator Network (Known Associates)",
+            "6. List All Unsolved/Open Cases",
+            "7. View Precinct Resource Custody Status",
+            "8. View Betting History (Challenger vs Defendant)",
+            "9. View Interview Records (Detective vs Perp)",
+            "10. List Detective Specializations",
+        ]
+        query_type = st.selectbox("Select Query", options)
         st.markdown("---")
 
         try:
-            if "Squad Roster" in query_type:
-                st.subheader("Search Detective Squads")
-                squad_filter = st.text_input(
-                    "Enter Squad Name (e.g., '99th', 'Cyber'):", ""
-                )
-                if st.button("Search Squad"):
-                    results = db.get_squad_roster(squad_filter)
-                    st.dataframe(results, use_container_width=True)
-
-            elif "Case Load" in query_type:
-                st.subheader("Detective Case Assignments")
-                if st.button("Generate Report"):
-                    results = db.get_case_load()
-                    st.dataframe(results, use_container_width=True)
-
-            elif "Halloween" in query_type:
-                st.subheader("Heist Winners")
-                if st.button("View Winners"):
-                    results = db.get_heist_winners()
-                    st.dataframe(results, use_container_width=True)
-
-            elif "Evidence Log" in query_type:
-                st.subheader("Evidence Text Search")
-                keyword = st.text_input("Enter keyword (e.g., 'Key', 'Tea'):", "")
-                if st.button("Search Evidence"):
-                    results = db.search_evidence(keyword)
-                    st.dataframe(results, use_container_width=True)
-
-            elif "Perpetrator" in query_type:
-                st.subheader("Criminal Associates Network")
-                if st.button("Load Network"):
-                    results = db.get_perpetrator_network()
-                    st.dataframe(results, use_container_width=True)
+            if "1." in query_type:
+                f = st.text_input("Squad Name Filter:", "")
+                if st.button("Run"):
+                    st.dataframe(db.get_squad_roster(f))
+            elif "2." in query_type:
+                if st.button("Run"):
+                    st.dataframe(db.get_case_load())
+            elif "3." in query_type:
+                if st.button("Run"):
+                    st.dataframe(db.get_heist_winners())
+            elif "4." in query_type:
+                k = st.text_input("Keyword:", "")
+                if st.button("Run"):
+                    st.dataframe(db.search_evidence(k))
+            elif "5." in query_type:
+                if st.button("Run"):
+                    st.dataframe(db.get_perpetrator_network())
+            elif "6." in query_type:
+                if st.button("Run"):
+                    st.dataframe(db.get_unsolved_cases())
+            elif "7." in query_type:
+                if st.button("Run"):
+                    st.dataframe(db.get_resource_custody())
+            elif "8." in query_type:
+                if st.button("Run"):
+                    st.dataframe(db.get_betting_history())
+            elif "9." in query_type:
+                if st.button("Run"):
+                    st.dataframe(db.get_interview_logs())
+            elif "10." in query_type:
+                if st.button("Run"):
+                    st.dataframe(db.get_detective_specializations())
 
         except Exception as e:
-            st.error(f"Query Execution Error: {e}")
+            st.error(f"Error: {e}")
 
     # ==========================================
     # PAGE: Updates (Write)
@@ -169,141 +166,102 @@ def main():
             '<div class="main-header">✏️ Record Updates</div>', unsafe_allow_html=True
         )
 
-        update_type = st.selectbox(
-            "Select Action",
-            [
-                "1. Log New Evidence (INSERT)",
-                "2. Update Case Status (UPDATE)",
-                "3. Dispose Resource (DELETE)",
-            ],
-        )
-
+        options = [
+            "1. Log New Evidence Item (INSERT)",
+            "2. Update Case File Status (UPDATE)",
+            "3. Dispose of Precinct Resource (DELETE)",
+            "4. Create New Case File (INSERT)",
+            "5. Assign Detective to Case (INSERT)",
+            "6. Add New Person of Interest (INSERT)",
+            "7. Add Perpetrator Details (INSERT)",
+            "8. Promote Detective Rank (UPDATE)",
+            "9. Transfer Detective to New Squad (UPDATE)",
+            "10. Delete Evidence Record (DELETE)",
+        ]
+        update_type = st.selectbox("Select Update", options)
         st.markdown("---")
 
         try:
-            # --- INSERT OPERATION ---
-            if "INSERT" in update_type:
-                st.subheader("Log New Evidence Item")
-                with st.form("insert_form"):
-                    case_id = st.number_input("Case ID", min_value=1, step=1)
-                    ev_tag = st.text_input("Evidence Tag (Unique)", "EV-XXX")
-                    desc = st.text_area("Description")
-                    loc = st.text_input("Storage Location", "Archives")
-                    badge = st.number_input("Logged By (Badge No)", min_value=1, step=1)
+            with st.form("update_form"):
+                if "1." in update_type:
+                    cid = st.number_input("Case ID", 100)
+                    tag = st.text_input("Tag")
+                    desc = st.text_input("Description")
+                    loc = st.text_input("Location")
+                    badge = st.number_input("Badge No", 9900)
+                    if st.form_submit_button("Execute"):
+                        st.success(db.insert_evidence(cid, tag, desc, loc, badge))
 
-                    submitted = st.form_submit_button("Log Evidence")
+                elif "2." in update_type:
+                    cid = st.number_input("Case ID", 100)
+                    stat = st.selectbox("Status", ["Open", "Closed", "Cold"])
+                    if st.form_submit_button("Execute"):
+                        st.success(db.update_case_status(cid, stat))
 
-                    if submitted:
-                        msg = db.insert_evidence(case_id, ev_tag, desc, loc, badge)
-                        st.success(msg)
-                        # Show new state
-                        st.write("### Updated Log for Case:")
-                        st.dataframe(
-                            db.execute_query(
-                                f"SELECT * FROM Evidence_Log WHERE case_id={case_id}"
-                            )
-                        )
+                elif "3." in update_type:
+                    tag = st.text_input("Asset Tag")
+                    if st.form_submit_button("Execute"):
+                        st.success(db.delete_resource(tag))
 
-            # --- UPDATE OPERATION ---
-            elif "UPDATE" in update_type:
-                st.subheader("Update Case File Status")
+                elif "4." in update_type:
+                    cid = st.number_input("New Case ID", 200)
+                    title = st.text_input("Title")
+                    if st.form_submit_button("Execute"):
+                        st.success(db.create_new_case(cid, title))
 
-                # Helper to show current cases
-                st.write("Current Active Cases:")
-                st.dataframe(
-                    db.execute_query(
-                        "SELECT case_id, case_title, status FROM Case_File"
-                    )
-                )
+                elif "5." in update_type:
+                    badge = st.number_input("Badge No", 9900)
+                    cid = st.number_input("Case ID", 100)
+                    if st.form_submit_button("Execute"):
+                        st.success(db.assign_detective(badge, cid))
 
-                with st.form("update_form"):
-                    case_id_upd = st.number_input(
-                        "Case ID to Update", min_value=1, step=1
-                    )
-                    new_status = st.selectbox(
-                        "New Status", ["Open", "Closed", "Cold", "Re-Opened"]
-                    )
+                elif "6." in update_type:
+                    pid = st.number_input("Person ID", 600)
+                    name = st.text_input("Name")
+                    ptype = st.selectbox("Type", ["Witness", "Perpetrator", "Victim"])
+                    if st.form_submit_button("Execute"):
+                        st.success(db.add_person_of_interest(pid, name, ptype))
 
-                    submitted = st.form_submit_button("Update Status")
+                elif "7." in update_type:
+                    perpid = st.number_input("Perp ID", 10)
+                    pid = st.number_input("Person ID", 600)
+                    alias = st.text_input("Alias")
+                    if st.form_submit_button("Execute"):
+                        st.success(db.add_perpetrator_details(perpid, pid, alias))
 
-                    if submitted:
-                        msg = db.update_case_status(case_id_upd, new_status)
-                        st.success(msg)
-                        # Verify update
-                        st.write("### Verification:")
-                        st.dataframe(
-                            db.execute_query(
-                                f"SELECT * FROM Case_File WHERE case_id={case_id_upd}"
-                            )
-                        )
+                elif "8." in update_type:
+                    badge = st.number_input("Badge No", 9900)
+                    rank = st.text_input("New Rank")
+                    if st.form_submit_button("Execute"):
+                        st.success(db.promote_detective(badge, rank))
 
-            # --- DELETE OPERATION ---
-            elif "DELETE" in update_type:
-                st.subheader("Dispose of Precinct Resource")
+                elif "9." in update_type:
+                    badge = st.number_input("Badge No", 9900)
+                    sq = st.number_input("New Squad ID", 1)
+                    if st.form_submit_button("Execute"):
+                        st.success(db.transfer_detective(badge, sq))
 
-                st.write("Current Resources:")
-                st.dataframe(db.execute_query("SELECT * FROM Precinct_Resource"))
-
-                with st.form("delete_form"):
-                    asset_tag = st.text_input("Asset Tag to Delete (e.g., RES-001)")
-
-                    submitted = st.form_submit_button("Delete Asset")
-
-                    if submitted:
-                        msg = db.delete_resource(asset_tag)
-                        st.success(msg)
-                        st.write("### Remaining Resources:")
-                        st.dataframe(
-                            db.execute_query("SELECT * FROM Precinct_Resource")
-                        )
+                elif "10." in update_type:
+                    tag = st.text_input("Evidence Tag")
+                    if st.form_submit_button("Execute"):
+                        st.success(db.delete_evidence(tag))
 
         except Exception as e:
             st.error(f"Operation Failed: {e}")
 
     # ==========================================
-    # PAGE: Table Inspector (Enhanced)
+    # PAGE: Table Inspector
     # ==========================================
     elif nav_option == "Table Inspector":
         st.markdown(
             '<div class="main-header">🗄️ Table Inspector</div>', unsafe_allow_html=True
         )
-
-        # 1. Get List of Tables
-        try:
-            tables = db.execute_query("SHOW TABLES")
-
-            if tables.empty:
-                st.warning("No tables found in the database.")
-            else:
-                # Extract table names to a list
-                table_list = tables.iloc[:, 0].tolist()
-
-                col1, col2 = st.columns([1, 3])
-                with col1:
-                    selected_table = st.selectbox("Select a Table", table_list)
-
-                if selected_table:
-                    # 2. Create Tabs for Schema vs Data
-                    tab_structure, tab_data = st.tabs(
-                        ["📋 Table Schema", "💾 View Data"]
-                    )
-
-                    with tab_structure:
-                        st.subheader(f"Structure: {selected_table}")
-                        desc = db.execute_query(f"DESCRIBE {selected_table}")
-                        st.dataframe(desc, use_container_width=True)
-
-                    with tab_data:
-                        st.subheader(f"Contents: {selected_table}")
-                        # Fetch all data from the selected table
-                        # Note: In a production app with millions of rows, you'd want to add LIMIT
-                        table_data = db.execute_query(f"SELECT * FROM {selected_table}")
-
-                        st.caption(f"Row Count: {len(table_data)}")
-                        st.dataframe(table_data, use_container_width=True)
-
-        except Exception as e:
-            st.error(f"Error inspecting tables: {e}")
+        tables = db.execute_query("SHOW TABLES")
+        if not tables.empty:
+            t = st.selectbox("Table", tables.iloc[:, 0].tolist())
+            st.dataframe(
+                db.execute_query(f"SELECT * FROM {t}"), use_container_width=True
+            )
 
 
 if __name__ == "__main__":
