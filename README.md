@@ -98,10 +98,10 @@ To start the text-based Command Line Interface:
 If you need to completely wipe the database and start fresh (e.g., if data gets corrupted):
  * Drop the Database:
     ```bash
-    mysql -u detective -p99 -e "DROP DATABASE IF EXISTS mini_world_db;"
+    mysql -u detective -p -e "DROP DATABASE IF EXISTS mini_world_db;"
     ```
  * Re-run the Setup:
     ```bash
-    mysql -u detective -p99 < src/schema.sql
-    mysql -u detective -p99 < src/populate.sql
+    mysql -u detective -p < src/schema.sql
+    mysql -u detective -p < src/populate.sql
     ```
