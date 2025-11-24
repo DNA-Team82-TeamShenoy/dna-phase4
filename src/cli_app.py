@@ -82,11 +82,11 @@ def main():
             # WRITE OPERATIONS
             elif choice == "11":
                 db.insert_evidence(
-                    input("Case ID [INT]: "),
+                    int(input("Case ID [INT]: ")),  # Convert to int
                     input("Tag [STRING, Unique, e.g. EV-999]: "),
                     input("Desc [TEXT]: "),
                     input("Loc [STRING]: "),
-                    input("Badge [INT]: "),
+                    int(input("Badge [INT]: ")),  # Convert to int
                 )
                 print("Evidence Logged.")
 
